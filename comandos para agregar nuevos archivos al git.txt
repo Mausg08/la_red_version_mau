@@ -1,0 +1,6 @@
+git add .
+git commit -m "Agrego nuevos archivos"
+git push origin main
+
+en la carpeta
+tree /f

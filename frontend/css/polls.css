@@ -1,0 +1,161 @@
+/* UniLink — polls.css */
+
+.polls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.poll-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  padding: 20px;
+  transition: box-shadow var(--transition);
+  animation: fadeInPost 300ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.poll-card:hover { box-shadow: var(--shadow-md); }
+
+.poll-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.poll-question {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  flex: 1;
+}
+.poll-status-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.poll-status-active  { background: var(--uni-green-light); color: var(--uni-green); }
+.poll-status-closed  { background: var(--gray-100);        color: var(--gray-600); }
+.poll-status-pending { background: var(--uni-blue-light);  color: var(--uni-blue); }
+
+.poll-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Options */
+.poll-options { display: flex; flex-direction: column; gap: 8px; }
+.poll-option {
+  position: relative;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+}
+.poll-option:hover:not(.voted) { border-color: var(--uni-blue-mid); background: var(--uni-blue-light); }
+.poll-option.selected { border-color: var(--uni-blue-mid); background: var(--uni-blue-light); color: var(--uni-blue); }
+.poll-option.voted { cursor: default; }
+.poll-option-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--uni-blue-light);
+  z-index: 0;
+  transition: width 600ms ease;
+  border-radius: var(--radius-md);
+}
+.poll-option-text {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.poll-option-pct {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--uni-blue);
+}
+
+/* Rating type */
+.poll-rating-stars {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.poll-star { opacity: 0.25; transition: opacity 150ms, transform 150ms; }
+.poll-star.active { opacity: 1; }
+.poll-star:hover { transform: scale(1.15); }
+
+/* Yes/No */
+.poll-yesno {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.poll-yesno-btn {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+  font-size: 16px;
+  font-weight: 700;
+  transition: all var(--transition);
+  text-align: center;
+}
+.poll-yesno-btn:hover { border-color: var(--uni-blue-mid); background: var(--uni-blue-light); }
+.poll-yesno-btn.yes.selected { border-color: var(--uni-green); background: var(--uni-green-light); color: var(--uni-green); }
+.poll-yesno-btn.no.selected  { border-color: var(--uni-red);   background: #FEECEC;              color: var(--uni-red); }
+
+/* Footer */
+.poll-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.poll-vote-btn {
+  padding: 8px 18px;
+  background: var(--uni-blue-mid);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all var(--transition);
+}
+.poll-vote-btn:hover { background: var(--uni-blue); }
+.poll-vote-btn:disabled { background: var(--gray-300); cursor: not-allowed; }
+
+/* Summary banner */
+.polls-summary-banner { margin-bottom: 16px; }
+.polls-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.summary-item {
+  text-align: center;
+  padding: 14px;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+}
+.summary-score {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  display: block;
+}
+.summary-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.summary-stars { color: #F59E0B; font-size: 14px; }

@@ -1,0 +1,132 @@
+/* UniLink — profile.css */
+
+.profile-layout {
+  grid-template-columns: 360px 1fr;
+  align-items: start;
+}
+
+.profile-card {
+  position: sticky;
+  top: 80px;
+}
+
+.profile-cover {
+  height: 120px;
+  background: linear-gradient(135deg, var(--uni-blue) 0%, var(--uni-blue-mid) 100%);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.profile-main {
+  padding: 0 20px 20px;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  width: fit-content;
+  margin-top: -44px;
+  margin-bottom: 12px;
+}
+.profile-avatar-wrap .avatar-xl {
+  border: 4px solid var(--white);
+  box-shadow: var(--shadow-md);
+  font-size: 32px;
+}
+
+.avatar-change-btn {
+  position: absolute;
+  bottom: 0;
+  right: -4px;
+  width: 28px;
+  height: 28px;
+  background: var(--uni-blue-mid);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  border: 2px solid var(--white);
+}
+
+.profile-name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.profile-role-badge {
+  margin-bottom: 8px;
+}
+.profile-faculty-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.profile-bio {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 20px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.profile-stat {
+  text-align: center;
+  flex: 1;
+}
+.profile-stat-num {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  display: block;
+}
+.profile-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-reputation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+  font-size: 13px;
+}
+.rep-stars { color: #F59E0B; font-size: 14px; }
+
+/* Posts column */
+.profile-posts-col { display: flex; flex-direction: column; gap: 16px; }
+.section-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 900px) {
+  .profile-layout { grid-template-columns: 1fr; }
+  .profile-card { position: static; }
+}

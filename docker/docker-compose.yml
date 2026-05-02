@@ -1,0 +1,180 @@
+version: '3.9'
+
+# ================================================================
+# UniLink — Docker Compose
+# One container per microservice, fully isolated
+# ================================================================
+
+services:
+
+  # ---- API Gateway + Frontend (Apache/PHP) ----
+  web:
+    image: php:8.2-apache
+    container_name: unilink_web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/var/www/html
+      - ./docker/apache.conf:/etc/apache2/sites-enabled/000-default.conf
+      - ./storage:/var/www/unilink/storage
+    environment:
+      APP_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_SECURE_32_CHAR_KEY}
+      DB_HOST: db_users
+      DB_USER: unilink
+      DB_PASS: ${DB_PASSWORD:-securepassword}
+      DB_NAME: red_social
+    depends_on:
+      - db_users
+      - db_feed
+      - db_marketplace
+      - redis
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+  # ---- WebSocket Server (Node.js + Socket.io) ----
+  websocket:
+    build:
+      context: ./websocket-server
+      dockerfile: Dockerfile
+    container_name: unilink_ws
+    ports:
+      - "3001:3001"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_SECURE_32_CHAR_KEY}
+      REDIS_URL: redis://redis:6379
+      PORT: 3001
+    depends_on:
+      - redis
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+  # ---- Database: Users & Core (PostgreSQL) ----
+  db_users:
+    image: postgres:15-alpine
+    container_name: red_social_users
+    environment:
+      POSTGRES_DB: red_social
+      POSTGRES_USER: unilink
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword}
+    volumes:
+      - db_users_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - unilink_net
+    restart: unless-stopped
+    # NOTE: No port exposed externally — only accessible within Docker network
+
+  # ---- Database: Feed & Posts (MySQL) ----
+  db_feed:
+    image: mysql:8.0
+    container_name: red_social_feed
+    environment:
+      MYSQL_DATABASE: red_social
+      MYSQL_USER: unilink
+      MYSQL_PASSWORD: ${DB_PASSWORD:-securepassword}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    volumes:
+      - db_feed_data:/var/lib/mysql
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+  # ---- Database: Marketplace (MySQL) ----
+  db_marketplace:
+    image: mysql:8.0
+    container_name: red_social_marketplace
+    environment:
+      MYSQL_DATABASE: red_social
+      MYSQL_USER: unilink
+      MYSQL_PASSWORD: ${DB_PASSWORD:-securepassword}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    volumes:
+      - db_marketplace_data:/var/lib/mysql
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+  # ---- Database: Moderation reports (MongoDB) ----
+  db_moderation:
+    image: mongo:7
+    container_name: red_social_mod
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: unilink
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-securepassword}
+      MONGO_INITDB_DATABASE: red_social
+    volumes:
+      - db_mod_data:/data/db
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+  # ---- Redis: Sessions, cache, rate limiting, message queue ----
+  redis:
+    image: redis:7-alpine
+    container_name: unilink_redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redissecret} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+  # ---- Message Queue Worker (email, notifications) ----
+  queue_worker:
+    image: php:8.2-cli
+    container_name: unilink_queue
+    command: php /app/backend/queue/worker.php
+    volumes:
+      - .:/app
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redissecret}@redis:6379
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+    depends_on:
+      - redis
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+  # ---- File Storage (MinIO — S3-compatible bucket) ----
+  storage:
+    image: minio/minio
+    container_name: unilink_storage
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Admin console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-unilink}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASS:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    networks:
+      - unilink_net
+    restart: unless-stopped
+
+# ================================================================
+# Volumes (persistent data)
+# ================================================================
+volumes:
+  db_users_data:
+  db_feed_data:
+  db_marketplace_data:
+  db_mod_data:
+  redis_data:
+  minio_data:
+
+# ================================================================
+# Networks
+# ================================================================
+networks:
+  unilink_net:
+    driver: bridge
+    # Microservices communicate ONLY within this network
+    # External access only through the 'web' container on port 80/443

@@ -1,0 +1,178 @@
+<?php
+session_start();
+require_once '../../backend/shared/auth_check.php';
+$user = $_SESSION['user'];
+$base = '/RedSocial_BUAP';
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed — UniLink BUAP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="<?= $base ?>/frontend/css/main.css">
+  <link rel="stylesheet" href="<?= $base ?>/frontend/css/dashboard.css">
+</head>
+<body class="dashboard-page">
+
+<?php include '../../frontend/components/sidebar.php'; ?>
+<?php include '../../frontend/components/topbar.php'; ?>
+
+<main class="main-content" id="mainContent">
+  <section class="feed-column">
+    <div class="card create-post-card">
+      <div class="card-body">
+        <div class="create-post-row">
+          <div class="avatar"><?= strtoupper(substr($user['first_name'],0,1)) ?></div>
+          <button class="create-post-trigger" id="openPostModal">
+            ¿Qué quieres compartir, <?= htmlspecialchars($user['first_name']) ?>?
+          </button>
+        </div>
+        <div class="create-post-actions">
+          <button class="post-action-btn" onclick="openPostModal('image')">🖼 Foto</button>
+          <button class="post-action-btn" onclick="openPostModal('event')">📅 Evento</button>
+          <button class="post-action-btn" onclick="openPostModal('poll')">📊 Encuesta</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="feed-filters">
+      <button class="filter-btn active" data-filter="all">Todo</button>
+      <button class="filter-btn" data-filter="academic">Académico</button>
+      <button class="filter-btn" data-filter="events">Eventos</button>
+      <button class="filter-btn" data-filter="groups">Mis grupos</button>
+    </div>
+
+    <div id="feed-container">
+      <div class="skeleton-post"></div>
+      <div class="skeleton-post"></div>
+      <div class="skeleton-post"></div>
+    </div>
+    <div id="feed-loader" class="feed-loader hidden">
+      <div class="spinner" style="border-top-color:var(--uni-blue-mid)"></div>
+      <span>Cargando más publicaciones...</span>
+    </div>
+    <div id="feed-end" class="feed-end hidden"><p>¡Has visto todo! 🎉</p></div>
+  </section>
+
+  <aside class="widgets-column">
+    <div class="card widget-card">
+      <div class="card-header">
+        <h3>Mis grupos activos</h3>
+        <a href="<?= $base ?>/frontend/pages/groups.php" class="link-small">Ver todos</a>
+      </div>
+      <div id="my-groups-list" class="groups-list"></div>
+    </div>
+    <div class="card widget-card">
+      <div class="card-header">
+        <h3>Próximos eventos</h3>
+        <a href="<?= $base ?>/frontend/pages/calendar.php" class="link-small">Calendario</a>
+      </div>
+      <div id="events-list" class="events-list"></div>
+    </div>
+    <div class="card widget-card">
+      <div class="card-header">
+        <h3>Marketplace</h3>
+        <a href="<?= $base ?>/frontend/pages/marketplace.php" class="link-small">Ver todo</a>
+      </div>
+      <div id="marketplace-quick" class="marketplace-quick"></div>
+    </div>
+  </aside>
+</main>
+
+<!-- Modal crear post -->
+<div class="modal-backdrop hidden" id="postModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h2 class="modal-title">Nueva publicación</h2>
+      <button class="modal-close" onclick="closeModal('postModal')">✕</button>
+    </div>
+    <form id="post-form" enctype="multipart/form-data">
+      <div class="post-modal-body">
+        <div class="post-author-row">
+          <div class="avatar"><?= strtoupper(substr($user['first_name'],0,1)) ?></div>
+          <div>
+            <p class="post-author-name"><?= htmlspecialchars($user['first_name'].' '.$user['last_name']) ?></p>
+            <select name="audience" class="audience-select">
+              <option value="public">🌐 Toda la uni</option>
+              <option value="faculty">🏛 Mi facultad</option>
+            </select>
+          </div>
+        </div>
+        <textarea name="content" id="post-content" placeholder="¿Qué quieres compartir?" rows="4" maxlength="2000" required></textarea>
+        <div class="char-counter"><span id="char-count">0</span>/2000</div>
+        <div id="post-extra-fields"></div>
+        <div class="post-categories">
+          <label class="field-label">Etiquetas (opcional)</label>
+          <div class="tag-options">
+            <button type="button" class="tag-btn" data-tag="academia">📖 Academia</button>
+            <button type="button" class="tag-btn" data-tag="eventos">🎉 Eventos</button>
+            <button type="button" class="tag-btn" data-tag="deporte">⚽ Deporte</button>
+            <button type="button" class="tag-btn" data-tag="tech">💻 Tech</button>
+            <button type="button" class="tag-btn" data-tag="cultura">🎭 Cultura</button>
+          </div>
+          <input type="hidden" name="tags" id="post-tags-input">
+        </div>
+        <label for="post-media" class="media-upload-label">
+          <span>🖼</span> Adjuntar imagen
+          <input type="file" id="post-media" name="media" accept="image/*,video/*" multiple>
+        </label>
+        <div id="media-preview" class="media-preview"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('postModal')">Cancelar</button>
+        <button type="submit" class="btn-primary" id="submit-post">
+          <span class="btn-text">Publicar</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal reporte -->
+<div class="modal-backdrop hidden" id="reportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Reportar publicación</h2>
+      <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+    </div>
+    <form id="report-form">
+      <input type="hidden" name="post_id" id="report-post-id">
+      <div class="post-modal-body">
+        <div class="report-reasons">
+          <label class="report-reason-item"><input type="radio" name="reason" value="spam"> Spam</label>
+          <label class="report-reason-item"><input type="radio" name="reason" value="harassment"> Acoso</label>
+          <label class="report-reason-item"><input type="radio" name="reason" value="hate_speech"> Discurso de odio</label>
+          <label class="report-reason-item"><input type="radio" name="reason" value="false_info"> Información falsa</label>
+          <label class="report-reason-item"><input type="radio" name="reason" value="inappropriate"> Contenido inapropiado</label>
+        </div>
+        <textarea name="details" placeholder="Detalles adicionales (opcional)" rows="2"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('reportModal')">Cancelar</button>
+        <button type="submit" class="btn-danger">🚩 Enviar reporte</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const UL_USER = <?= json_encode([
+  'id'      => $user['user_id'],
+  'name'    => ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''),
+  'role'    => $user['role'],
+  'faculty' => $user['faculty_id'] ?? null,
+  'avatar'  => $user['avatar'] ?? null,
+]) ?>;
+const UL_TOKEN = '<?= $_SESSION['jwt_token'] ?? '' ?>';
+</script>
+<script src="<?= $base ?>/frontend/js/utils.js"></script>
+<script src="<?= $base ?>/frontend/js/feed.js"></script>
+<script src="<?= $base ?>/frontend/js/notifications.js"></script>
+<script src="<?= $base ?>/frontend/js/websocket.js"></script>
+</body>
+</html>
