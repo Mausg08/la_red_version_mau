@@ -41,6 +41,9 @@ body.dashboard-page {
   width: 36px; height: 36px; font-size: 18px;
   background: rgba(255,255,255,.15);
   border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .sidebar-header .logo-text {
   color: #fff;
