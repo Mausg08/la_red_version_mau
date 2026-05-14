@@ -116,6 +116,73 @@ if ($method === 'GET' && preg_match('#^academic/groups/(\d+)$#', $path, $m)) {
 }
 
 // ============================================================
+//  GET /academic/groups/{id}/members
+// ============================================================
+if ($method === 'GET' && preg_match('#^academic/groups/(\d+)/members$#', $path, $m)) {
+    $id = (int)$m[1];
+    $db = getDB_academic();
+
+    $stmt = $db->prepare("
+        SELECT u.user_id, u.first_name, u.last_name, u.avatar, gm.role, gm.joined_at
+        FROM group_members gm
+        JOIN users u ON u.user_id = gm.user_id
+        WHERE gm.group_id = ?
+        ORDER BY gm.joined_at DESC
+    ");
+    $stmt->execute([$id]);
+    $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    Response::success(['members' => $members]);
+}
+
+// ============================================================
+//  GET /academic/groups/{id}/posts
+// ============================================================
+if ($method === 'GET' && preg_match('#^academic/groups/(\d+)/posts$#', $path, $m)) {
+    $id = (int)$m[1];
+    $limit = min(50, (int)($_GET['limit'] ?? 20));
+    $db = getDB_academic();
+
+    $stmt = $db->prepare("
+        SELECT p.post_id, p.content, p.created_at,
+               u.user_id, u.first_name, u.last_name, u.avatar
+        FROM group_posts p
+        JOIN users u ON u.user_id = p.user_id
+        WHERE p.group_id = ?
+        ORDER BY p.created_at DESC
+        LIMIT ?
+    ");
+    $stmt->execute([$id, $limit]);
+    $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    Response::success(['posts' => $posts]);
+}
+
+// ============================================================
+//  POST /academic/groups/{id}/posts
+// ============================================================
+if ($method === 'POST' && preg_match('#^academic/groups/(\d+)/posts$#', $path, $m)) {
+    $id = (int)$m[1];
+    $body = REQUEST_BODY;
+    $content = sanitize($body['content'] ?? '');
+    if (!$content) Response::error('El contenido no puede estar vacío.', 422);
+
+    $db = getDB_academic();
+
+    // Verificar que el usuario es miembro del grupo
+    $check = $db->prepare("SELECT 1 FROM group_members WHERE group_id=? AND user_id=?");
+    $check->execute([$id, $user['user_id']]);
+    if (!$check->fetchColumn()) {
+        Response::error('Debes ser miembro del grupo para publicar.', 403);
+    }
+
+    $stmt = $db->prepare("INSERT INTO group_posts (group_id, user_id, content) VALUES (?,?,?)");
+    $stmt->execute([$id, $user['user_id'], $content]);
+
+    Response::success(['post_id' => $db->lastInsertId()], 'Publicación creada.', 201);
+}
+
+// ============================================================
 //  POST /academic/groups/{id}/join
 // ============================================================
 if ($method === 'POST' && preg_match('#^academic/groups/(\d+)/join$#', $path, $m)) {
