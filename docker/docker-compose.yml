@@ -1,50 +1,142 @@
-version: '3.9'
+x-php-service: &php_service
+  build:
+    context: ..
+    dockerfile: docker/php/Dockerfile
+  volumes:
+    - ..:/var/www/html
+    - ../storage:/var/www/html/storage
+  networks:
+    - unilink_net
+  restart: unless-stopped
 
-# ================================================================
-# UniLink — Docker Compose
-# One container per microservice, fully isolated
-# ================================================================
+x-service-env: &service_env
+  APP_ENV: production
+  BASE_PATH: /RedSocial_BUAP
+  STORAGE_PATH: /var/www/html/storage
+  JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_SECURE_32_CHAR_KEY}
+  DB_USER: unilink
+  DB_PASS: ${DB_PASSWORD:-securepassword}
+  DB_NAME: red_social
+
+x-mysql-db: &mysql_db
+  image: mysql:8.0
+  environment:
+    MYSQL_DATABASE: red_social
+    MYSQL_USER: unilink
+    MYSQL_PASSWORD: ${DB_PASSWORD:-securepassword}
+    MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+  networks:
+    - unilink_net
+  restart: unless-stopped
 
 services:
-
-  # ---- API Gateway + Frontend (Apache/PHP) ----
   web:
-    image: php:8.2-apache
+    <<: *php_service
     container_name: unilink_web
     ports:
       - "80:80"
       - "443:443"
-    volumes:
-      - .:/var/www/html
-      - ./docker/apache.conf:/etc/apache2/sites-enabled/000-default.conf
-      - ./storage:/var/www/unilink/storage
     environment:
-      APP_ENV: production
-      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_SECURE_32_CHAR_KEY}
+      <<: *service_env
       DB_HOST: db_users
-      DB_USER: unilink
-      DB_PASS: ${DB_PASSWORD:-securepassword}
-      DB_NAME: red_social
+      FEED_SERVICE_URL: http://feed-service/backend/microservices
+      GROUPS_SERVICE_URL: http://groups-service/backend/microservices
+      CALENDAR_SERVICE_URL: http://calendar-service/backend/microservices
+      MARKETPLACE_SERVICE_URL: http://marketplace-service/backend/microservices
+      LOST_FOUND_SERVICE_URL: http://lost-found-service/backend/microservices
+      DIRECTORY_SERVICE_URL: http://directory-service/backend/microservices
+      POLLS_SERVICE_URL: http://polls-service/backend/microservices
     depends_on:
       - db_users
-      - db_feed
-      - db_marketplace
+      - feed-service
+      - groups-service
+      - calendar-service
+      - marketplace-service
+      - lost-found-service
+      - directory-service
+      - polls-service
       - redis
-    networks:
-      - unilink_net
-    restart: unless-stopped
 
-  # ---- WebSocket Server (Node.js + Socket.io) ----
+  feed-service:
+    <<: *php_service
+    container_name: unilink_feed
+    environment:
+      <<: *service_env
+      SERVICE_NAME: feed
+      DB_HOST: db_feed
+    depends_on:
+      - db_feed
+
+  groups-service:
+    <<: *php_service
+    container_name: unilink_groups
+    environment:
+      <<: *service_env
+      SERVICE_NAME: groups
+      DB_HOST: db_groups
+    depends_on:
+      - db_groups
+
+  calendar-service:
+    <<: *php_service
+    container_name: unilink_calendar
+    environment:
+      <<: *service_env
+      SERVICE_NAME: calendar
+      DB_HOST: db_calendar
+    depends_on:
+      - db_calendar
+
+  marketplace-service:
+    <<: *php_service
+    container_name: unilink_marketplace
+    environment:
+      <<: *service_env
+      SERVICE_NAME: marketplace
+      DB_HOST: db_marketplace
+    depends_on:
+      - db_marketplace
+
+  lost-found-service:
+    <<: *php_service
+    container_name: unilink_lost_found
+    environment:
+      <<: *service_env
+      SERVICE_NAME: lost-found
+      DB_HOST: db_lost_found
+    depends_on:
+      - db_lost_found
+
+  directory-service:
+    <<: *php_service
+    container_name: unilink_directory
+    environment:
+      <<: *service_env
+      SERVICE_NAME: directory
+      DB_HOST: db_directory
+    depends_on:
+      - db_directory
+
+  polls-service:
+    <<: *php_service
+    container_name: unilink_polls
+    environment:
+      <<: *service_env
+      SERVICE_NAME: polls
+      DB_HOST: db_polls
+    depends_on:
+      - db_polls
+
   websocket:
     build:
-      context: ./websocket-server
+      context: ../websocket-server
       dockerfile: Dockerfile
     container_name: unilink_ws
     ports:
       - "3001:3001"
     environment:
       JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_SECURE_32_CHAR_KEY}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redissecret}@redis:6379
       PORT: 3001
     depends_on:
       - redis
@@ -52,53 +144,62 @@ services:
       - unilink_net
     restart: unless-stopped
 
-  # ---- Database: Users & Core (PostgreSQL) ----
   db_users:
-    image: postgres:15-alpine
+    <<: *mysql_db
     container_name: red_social_users
-    environment:
-      POSTGRES_DB: red_social
-      POSTGRES_USER: unilink
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword}
     volumes:
-      - db_users_data:/var/lib/postgresql/data
-      - ./database/migrations:/docker-entrypoint-initdb.d
-    networks:
-      - unilink_net
-    restart: unless-stopped
-    # NOTE: No port exposed externally — only accessible within Docker network
+      - db_users_data:/var/lib/mysql
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
 
-  # ---- Database: Feed & Posts (MySQL) ----
   db_feed:
-    image: mysql:8.0
+    <<: *mysql_db
     container_name: red_social_feed
-    environment:
-      MYSQL_DATABASE: red_social
-      MYSQL_USER: unilink
-      MYSQL_PASSWORD: ${DB_PASSWORD:-securepassword}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
     volumes:
       - db_feed_data:/var/lib/mysql
-    networks:
-      - unilink_net
-    restart: unless-stopped
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
 
-  # ---- Database: Marketplace (MySQL) ----
+  db_groups:
+    <<: *mysql_db
+    container_name: red_social_groups
+    volumes:
+      - db_groups_data:/var/lib/mysql
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+
+  db_calendar:
+    <<: *mysql_db
+    container_name: red_social_calendar
+    volumes:
+      - db_calendar_data:/var/lib/mysql
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+
   db_marketplace:
-    image: mysql:8.0
+    <<: *mysql_db
     container_name: red_social_marketplace
-    environment:
-      MYSQL_DATABASE: red_social
-      MYSQL_USER: unilink
-      MYSQL_PASSWORD: ${DB_PASSWORD:-securepassword}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
     volumes:
       - db_marketplace_data:/var/lib/mysql
-    networks:
-      - unilink_net
-    restart: unless-stopped
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
 
-  # ---- Database: Moderation reports (MongoDB) ----
+  db_lost_found:
+    <<: *mysql_db
+    container_name: red_social_lost_found
+    volumes:
+      - db_lost_found_data:/var/lib/mysql
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+
+  db_directory:
+    <<: *mysql_db
+    container_name: red_social_directory
+    volumes:
+      - db_directory_data:/var/lib/mysql
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+
+  db_polls:
+    <<: *mysql_db
+    container_name: red_social_polls
+    volumes:
+      - db_polls_data:/var/lib/mysql
+      - ../red_social.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+
   db_moderation:
     image: mongo:7
     container_name: red_social_mod
@@ -112,7 +213,6 @@ services:
       - unilink_net
     restart: unless-stopped
 
-  # ---- Redis: Sessions, cache, rate limiting, message queue ----
   redis:
     image: redis:7-alpine
     container_name: unilink_redis
@@ -123,33 +223,33 @@ services:
       - unilink_net
     restart: unless-stopped
 
-  # ---- Message Queue Worker (email, notifications) ----
   queue_worker:
-    image: php:8.2-cli
+    build:
+      context: ..
+      dockerfile: docker/php/Dockerfile
     container_name: unilink_queue
-    command: php /app/backend/queue/worker.php
+    command: php /var/www/html/backend/queue/worker.php
     volumes:
-      - .:/app
+      - ..:/var/www/html
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD:-redissecret}@redis:6379
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     depends_on:
       - redis
     networks:
       - unilink_net
     restart: unless-stopped
 
-  # ---- File Storage (MinIO — S3-compatible bucket) ----
   storage:
     image: minio/minio
     container_name: unilink_storage
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Admin console
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-unilink}
       MINIO_ROOT_PASSWORD: ${MINIO_PASS:-minioadmin123}
@@ -159,22 +259,19 @@ services:
       - unilink_net
     restart: unless-stopped
 
-# ================================================================
-# Volumes (persistent data)
-# ================================================================
 volumes:
   db_users_data:
   db_feed_data:
+  db_groups_data:
+  db_calendar_data:
   db_marketplace_data:
+  db_lost_found_data:
+  db_directory_data:
+  db_polls_data:
   db_mod_data:
   redis_data:
   minio_data:
 
-# ================================================================
-# Networks
-# ================================================================
 networks:
   unilink_net:
     driver: bridge
-    # Microservices communicate ONLY within this network
-    # External access only through the 'web' container on port 80/443

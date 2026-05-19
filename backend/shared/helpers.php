@@ -12,18 +12,18 @@ if (!defined('UL_ENV')) {
     define('JWT_EXPIRY',  60 * 60 * 24 * 7);
 
     // ── Base de datos (confirmado por diagnóstico) ────────────
-    define('DB_HOST', '127.0.0.1');
-    define('DB_PORT', '3306');
-    define('DB_USER', 'root');
-    define('DB_PASS', '');
-    define('DB_NAME', 'red_social');
+    define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+    define('DB_PORT', getenv('DB_PORT') ?: '3306');
+    define('DB_USER', getenv('DB_USER') ?: 'root');
+    define('DB_PASS', getenv('DB_PASS') ?: '');
+    define('DB_NAME', getenv('DB_NAME') ?: 'red_social');
 
     // ── Rutas del proyecto ────────────────────────────────────
-    define('BASE_URL',    'http://localhost/RedSocial_BUAP');
-    define('BASE_PATH',   '/RedSocial_BUAP');
+    define('BASE_URL', getenv('BASE_URL') ?: 'http://localhost/RedSocial_BUAP');
+    define('BASE_PATH', getenv('BASE_PATH') ?: '/RedSocial_BUAP');
 
     // ── Almacenamiento ────────────────────────────────────────
-    define('STORAGE_PATH', 'C:/xampp/htdocs/RedSocial_BUAP/storage');
+    define('STORAGE_PATH', getenv('STORAGE_PATH') ?: 'C:/xampp/htdocs/RedSocial_BUAP/storage');
     define('STORAGE_URL',  BASE_PATH . '/storage');
 
     // ── Dominios BUAP ─────────────────────────────────────────

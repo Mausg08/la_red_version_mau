@@ -436,7 +436,7 @@ async function loadWidgets() {
 
 async function loadMyGroups() {
   try {
-    const { groups } = await apiFetch('academic/my-groups?limit=5');
+    const { groups } = await apiFetch('groups/my-groups?limit=5');
     const container = document.getElementById('my-groups-list');
     if (!groups.length) {
       container.innerHTML = `<p style="padding:16px;font-size:13px;color:var(--text-muted);text-align:center">Sin grupos activos</p>`;
@@ -456,7 +456,8 @@ async function loadMyGroups() {
 
 async function loadEvents() {
   try {
-    const { events } = await apiFetch('academic/events?limit=4&upcoming=1');
+    const res = await apiFetch('calendar/events?limit=4&upcoming=1');
+    const events = res.events || res.data || [];
     const container = document.getElementById('events-list');
     if (!events.length) {
       container.innerHTML = `<p style="padding:16px;font-size:13px;color:var(--text-muted);text-align:center">Sin eventos próximos</p>`;
@@ -481,7 +482,8 @@ async function loadEvents() {
 
 async function loadMarketplaceQuick() {
   try {
-    const { listings } = await apiFetch('marketplace/listings?limit=4&sort=recent');
+    const res = await apiFetch('marketplace/listings?limit=4&sort=recent');
+    const listings = res.listings || res.data || [];
     const container = document.getElementById('marketplace-quick');
     if (!listings.length) {
       container.innerHTML = `<p style="padding:16px;font-size:13px;color:var(--text-muted);text-align:center">Sin anuncios recientes</p>`;

@@ -64,7 +64,12 @@ $services = [
     'auth'        => '../microservices/users/auth_controller.php',
     'users'       => '../microservices/users/users_controller.php',
     'feed'        => '../microservices/feed/feed_controller.php',
+    'groups'      => '../microservices/groups/groups_controller.php',
+    'calendar'    => '../microservices/calendar/calendar_controller.php',
     'marketplace' => '../microservices/marketplace/marketplace_controller.php',
+    'lost-found'  => '../microservices/lost-found/lost_found_controller.php',
+    'directory'   => '../microservices/directory/directory_controller.php',
+    'polls'       => '../microservices/polls/polls_controller.php',
     'academic'    => '../microservices/academic/academic_controller.php',
     'moderation'  => '../microservices/moderation/moderation_controller.php',
 ];
@@ -114,6 +119,94 @@ if (!defined('REQUEST_PATH')) {
 }
 if (!defined('REQUEST_METHOD')) {
     define('REQUEST_METHOD', $_SERVER['REQUEST_METHOD']);
+}
+
+function serviceEnvName(string $service): string {
+    return strtoupper(str_replace('-', '_', $service)) . '_SERVICE_URL';
+}
+
+function proxyToService(string $service, string $path, string $rawBody): void {
+    $baseUrl = rtrim((string) getenv(serviceEnvName($service)), '/');
+    if ($baseUrl === '') {
+        return;
+    }
+
+    $query = $_GET;
+    $query['service'] = $service;
+    $query['path'] = $path;
+    $url = $baseUrl . '/index.php?' . http_build_query($query);
+
+    $isMultipart = str_starts_with(strtolower($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data');
+    $headers = [
+        'X-Forwarded-For: ' . ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'),
+    ];
+    if (!$isMultipart) {
+        $headers[] = 'Content-Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'application/json');
+    }
+
+    $token = resolveBearerToken();
+    if ($token) {
+        $headers[] = 'Authorization: Bearer ' . $token;
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST  => $_SERVER['REQUEST_METHOD'],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HEADER         => true,
+        CURLOPT_HTTPHEADER     => $headers,
+        CURLOPT_POSTFIELDS     => in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH', 'DELETE'], true)
+            ? ($isMultipart ? buildMultipartPayload() : $rawBody)
+            : null,
+        CURLOPT_CONNECTTIMEOUT_MS => 800,
+        CURLOPT_TIMEOUT_MS        => 2500,
+    ]);
+
+    $response = curl_exec($ch);
+    if ($response === false) {
+        Response::error('El microservicio ' . $service . ' no esta disponible.', 503);
+    }
+
+    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE) ?: 502;
+    $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $body = substr($response, $headerSize);
+    curl_close($ch);
+
+    http_response_code($status);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo $body;
+    exit;
+}
+
+function buildMultipartPayload(): array {
+    $payload = $_POST;
+    foreach ($_FILES as $field => $fileInfo) {
+        if (is_array($fileInfo['name'])) {
+            foreach ($fileInfo['name'] as $index => $name) {
+                if (($fileInfo['error'][$index] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+                $payload[$field . '[' . $index . ']'] = new CURLFile(
+                    $fileInfo['tmp_name'][$index],
+                    $fileInfo['type'][$index] ?? 'application/octet-stream',
+                    $name
+                );
+            }
+            continue;
+        }
+        if (($fileInfo['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+            $payload[$field] = new CURLFile(
+                $fileInfo['tmp_name'],
+                $fileInfo['type'] ?? 'application/octet-stream',
+                $fileInfo['name']
+            );
+        }
+    }
+    return $payload;
+}
+
+if (function_exists('curl_init')) {
+    proxyToService($service, $path, $rawBody);
 }
 
 $controllerFile = realpath(__DIR__ . '/' . $services[$service]);

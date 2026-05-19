@@ -109,7 +109,7 @@ async function loadLostItems() {
 
   try {
     const params = lostFilter !== 'all' ? `lost_type=${lostFilter}&` : '';
-    const res = await apiFetch(`marketplace/listings?${params}is_lost_found=1&status=active&limit=24`);
+    const res = await apiFetch(`lost-found/items?${params}status=active&limit=24`);
     const listings = res.data || [];
     grid.innerHTML = '';
     if (!listings.length) { document.getElementById('lost-empty').classList.remove('hidden'); return; }
@@ -184,7 +184,7 @@ document.getElementById('lost-form')?.addEventListener('submit', async (e) => {
   fd.append('price', '0');
   fd.append('category', 'otros');
   try {
-    const res = await fetch('/RedSocial_BUAP/backend/api-gateway/index.php?service=marketplace&path=marketplace/listings', {
+    const res = await fetch('/RedSocial_BUAP/backend/api-gateway/index.php?service=lost-found&path=lost-found/items', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${UL_TOKEN}` },
       body: fd

@@ -8,6 +8,7 @@ const userVotes = {}; // pollId → optionId or rating
 
 document.addEventListener('DOMContentLoaded', () => {
   loadPolls();
+  loadPollTargetGroups();
   setupCreatePollForm();
 });
 
@@ -22,7 +23,7 @@ async function loadPolls() {
       ? `category=${pollsFilter}`
       : pollsFilter === 'activa' ? 'status=active' : '';
 
-    const { data: polls } = await apiFetch(`academic/polls?${params}&limit=30`);
+    const { data: polls } = await apiFetch(`polls?${params}&limit=30`);
 
     grid.innerHTML = '';
     if (!polls?.length) {
@@ -48,6 +49,11 @@ function renderPollCard(poll) {
   const hasVoted  = poll.user_voted || !!userVotes[poll.poll_id];
   const totalVotes = poll.total_votes || 0;
   const closesStr  = poll.closes_at ? `Cierra ${timeAgo(poll.closes_at)}` : '';
+  const scopeLabel = poll.audience === 'group'
+    ? `Grupo: ${poll.group_name || 'grupo'}`
+    : poll.audience === 'faculty'
+      ? `Facultad: ${poll.faculty_name || 'mi facultad'}`
+      : 'Público general';
 
   const catIcons = { cafeteria:'🍽', laboratorio:'🔬', transporte:'🚌', biblioteca:'📚', academico:'🎓', general:'📊' };
 
@@ -56,6 +62,7 @@ function renderPollCard(poll) {
       <div class="poll-question">${catIcons[poll.category]||'📊'} ${escHtml(poll.title)}</div>
       <span class="poll-status-badge poll-status-${poll.status}">${poll.status === 'active' ? 'Activa' : 'Cerrada'}</span>
     </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${escHtml(scopeLabel)}</div>
     ${poll.description ? `<p class="poll-description">${escHtml(poll.description)}</p>` : ''}
     <div id="poll-body-${poll.poll_id}">
       ${buildPollBody(poll, hasVoted)}
@@ -94,8 +101,8 @@ function buildPollBody(poll, hasVoted) {
   }
 
   if (poll.poll_type === 'yesno') {
-    const yesVotes = poll.options?.find(o=>o.text==='Sí')?.votes || 0;
-    const noVotes  = poll.options?.find(o=>o.text==='No')?.votes  || 0;
+    const yesVotes = poll.options?.[0]?.votes || 0;
+    const noVotes  = poll.options?.[1]?.votes  || 0;
     const total    = yesVotes + noVotes || 1;
     if (show) {
       return `<div class="poll-yesno">
@@ -167,7 +174,7 @@ async function submitVote(pollId, type) {
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
   try {
-    const res = await apiFetch(`academic/polls/${pollId}/vote`, {
+    const res = await apiFetch(`polls/${pollId}/vote`, {
       method: 'POST',
       body: JSON.stringify({ vote, type })
     });
@@ -235,8 +242,32 @@ function setPollType(type) {
   const optSection = document.getElementById('poll-options-section');
   if (type === 'options') {
     optSection.style.display = 'block';
+    optSection.querySelectorAll('input').forEach(input => input.required = true);
   } else {
     optSection.style.display = 'none';
+    optSection.querySelectorAll('input').forEach(input => input.required = false);
+  }
+}
+
+function togglePollAudienceTarget(value) {
+  const target = document.getElementById('poll-group-target');
+  const select = document.getElementById('poll-group-select');
+  const isGroup = value === 'group';
+  target?.classList.toggle('hidden', !isGroup);
+  if (select) select.required = isGroup;
+}
+
+async function loadPollTargetGroups() {
+  const select = document.getElementById('poll-group-select');
+  if (!select) return;
+
+  try {
+    const res = await apiFetch('groups/my-groups?limit=50');
+    const groups = res.groups || res.data || [];
+    select.innerHTML = '<option value="">Selecciona un grupo</option>' +
+      groups.map(g => `<option value="${g.group_id}">${escHtml(g.name)}</option>`).join('');
+  } catch {
+    select.innerHTML = '<option value="">No se pudieron cargar tus grupos</option>';
   }
 }
 
@@ -256,6 +287,7 @@ function setupCreatePollForm() {
     const btn  = e.target.querySelector('[type="submit"]');
     const data = formToJSON(e.target);
     const type = e.target.querySelector('[name="poll_type"]:checked')?.value || 'options';
+    const audience = e.target.querySelector('[name="audience"]')?.value || 'public';
 
     let options = [];
     if (type === 'options') {
@@ -263,19 +295,26 @@ function setupCreatePollForm() {
         .map(i => i.value.trim()).filter(Boolean);
       if (options.length < 2) { showToast('Agrega al menos 2 opciones', 'info'); return; }
     } else if (type === 'yesno') {
-      options = ['Sí', 'No'];
+      options = ['Si', 'No'];
+    }
+
+    if (audience === 'group' && !data.group_id) {
+      showToast('Selecciona el grupo de destino', 'info');
+      return;
     }
 
     btn.disabled    = true;
     btn.textContent = 'Publicando...';
 
     try {
-      await apiFetch('academic/polls', {
+      await apiFetch('polls', {
         method: 'POST',
         body: JSON.stringify({ ...data, poll_type: type, options })
       });
       closeModal('createPollModal');
       e.target.reset();
+      setPollType('options');
+      togglePollAudienceTarget('public');
       showToast('Encuesta publicada 🗳', 'success');
       loadPolls();
     } catch (err) {

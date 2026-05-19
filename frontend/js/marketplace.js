@@ -108,7 +108,8 @@ async function openListingDetail(id) {
     '<div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner" style="border-top-color:var(--uni-blue-mid);margin:0 auto"></div></div>';
 
   try {
-    const { data: l } = await apiFetch(`marketplace/listings/${id}`);
+    const res = await apiFetch(`marketplace/listings/${id}`);
+    const l = res.listing || res.data?.listing || res.data;
     document.getElementById('detail-title').textContent = l.title;
 
     const images = l.images?.length ? l.images : [null];
@@ -204,7 +205,7 @@ function setupListingForm() {
 
     const fd = new FormData(e.target);
     try {
-      const res = await fetch(`/backend/api-gateway/index.php?service=marketplace&path=marketplace/listings`, {
+      const res = await fetch(`${UL_BASE}/backend/api-gateway/index.php?service=marketplace&path=marketplace/listings`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${UL_TOKEN}` },
         body: fd

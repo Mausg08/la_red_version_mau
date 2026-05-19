@@ -42,8 +42,8 @@ async function loadGroups() {
     });
 
     const endpoint = groupTab === 'mine'
-      ? `academic/my-groups?limit=24`
-      : `academic/groups?${params}`;
+      ? `groups/my-groups?limit=24`
+      : `groups?${params}`;
 
     const res = await apiFetch(endpoint);
     const groups = res.groups || res.data || [];
@@ -102,7 +102,7 @@ async function joinGroup(id, btn) {
   btn.disabled = true;
   btn.textContent = 'Uniéndote...';
   try {
-    await apiFetch(`academic/groups/${id}/join`, { method: 'POST' });
+    await apiFetch(`groups/${id}/join`, { method: 'POST' });
     showToast('Te uniste al grupo 🎉', 'success');
     loadGroups();
   } catch (e) {
@@ -115,7 +115,7 @@ async function joinGroup(id, btn) {
 async function leaveGroup(id) {
   if (!confirm('¿Salir de este grupo?')) return;
   try {
-    await apiFetch(`academic/groups/${id}/leave`, { method: 'DELETE' });
+    await apiFetch(`groups/${id}/leave`, { method: 'DELETE' });
     showToast('Saliste del grupo', 'info');
     loadGroups();
   } catch (e) {
@@ -132,7 +132,7 @@ async function joinByNRC() {
   result.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Buscando...</p>';
 
   try {
-    const res = await apiFetch(`academic/groups?q=${encodeURIComponent(nrc)}&type=nrc`);
+    const res = await apiFetch(`groups?q=${encodeURIComponent(nrc)}&type=nrc`);
     const groups = res.data || [];
 
     if (!groups.length) {
@@ -192,8 +192,8 @@ async function _loadGroups() {
     });
 
     const endpoint = groupTab === 'mine'
-      ? `academic/my-groups?limit=24`
-      : `academic/groups?${params}`;
+      ? `groups/my-groups?limit=24`
+      : `groups?${params}`;
 
     const res    = await apiFetch(endpoint);
     const groups = res.groups || res.data || [];
@@ -228,7 +228,7 @@ function setupCreateForm() {
     e.preventDefault();
     const fd = formToJSON(e.target);
     try {
-      const res = await apiFetch('academic/groups', {
+      const res = await apiFetch('groups', {
         method: 'POST',
         body: JSON.stringify(fd)
       });

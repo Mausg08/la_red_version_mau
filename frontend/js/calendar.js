@@ -39,7 +39,7 @@ async function loadEvents() {
   try {
     const year  = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
-    const { data } = await apiFetch(`academic/events?limit=100&year=${year}&month=${month}`);
+    const { data } = await apiFetch(`calendar/events?limit=100&year=${year}&month=${month}`);
     allEvents = data || [];
     eventsLoaded = true;
   } catch { allEvents = []; }
@@ -47,7 +47,7 @@ async function loadEvents() {
 
 async function loadUpcoming() {
   try {
-    const { data } = await apiFetch('academic/events?upcoming=1&limit=8');
+    const { data } = await apiFetch('calendar/events?upcoming=1&limit=8');
     const container = document.getElementById('upcoming-list');
     if (!data?.length) {
       container.innerHTML = '<p style="padding:16px;font-size:13px;color:var(--text-muted);text-align:center">Sin próximos eventos</p>';
@@ -228,7 +228,7 @@ async function showEventById(id) {
   const cached = allEvents.find(e => e.event_id === id);
   if (cached) { showEventDetail(cached); return; }
   try {
-    const { data } = await apiFetch(`academic/events/${id}`);
+    const { data } = await apiFetch(`calendar/events/${id}`);
     showEventDetail(data);
   } catch { showToast('Error al cargar evento', 'error'); }
 }
@@ -355,7 +355,7 @@ function setupCreateForm() {
     btn.textContent = 'Creando...';
 
     try {
-      await apiFetch('academic/events', { method: 'POST', body: JSON.stringify(data) });
+      await apiFetch('calendar/events', { method: 'POST', body: JSON.stringify(data) });
       closeModal('createEventModal');
       showToast('Evento creado 🎉', 'success');
       e.target.reset();

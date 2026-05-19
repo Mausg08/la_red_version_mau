@@ -181,7 +181,8 @@ let detailTab = 'feed';
 /* ====== LOAD GROUP DETAIL ====== */
 async function loadGroupDetail() {
   try {
-    const { data } = await apiFetch(`academic/groups/${GROUP_ID}`);
+    const res = await apiFetch(`groups/${GROUP_ID}`);
+    const data = res.group || res.data?.group || res.data;
     if (!data) { window.location.href = 'groups.php'; return; }
 
     const typeLabels = { nrc:'Materia NRC', faculty:'Facultad', club:'Club', study:'Grupo de estudio', general:'General' };
@@ -223,8 +224,8 @@ async function loadGroupDetail() {
 async function loadGroupFeed() {
     const container = document.getElementById('posts-container');
     try {
-        const { data } = await apiFetch(`academic/groups/${GROUP_ID}/posts?limit=20`);
-        const posts = data || [];
+        const res = await apiFetch(`groups/${GROUP_ID}/posts?limit=20`);
+        const posts = res.posts || res.data?.posts || res.data || [];
         if (!posts.length) {
             container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">📭 No hay publicaciones aún. ¡Sé el primero!</div>';
             return;
@@ -249,8 +250,8 @@ async function loadGroupFeed() {
 async function loadGroupMembers() {
     const container = document.getElementById('tab-members');
     try {
-        const { data } = await apiFetch(`academic/groups/${GROUP_ID}/members`);
-        const members = data || [];
+        const res = await apiFetch(`groups/${GROUP_ID}/members`);
+        const members = res.members || res.data?.members || res.data || [];
         if (!members.length) {
             container.innerHTML = '<p style="padding:20px;color:var(--text-muted)">No hay miembros aún</p>';
             return;
@@ -271,7 +272,7 @@ async function loadGroupMembers() {
 /* ====== JOIN FROM DETAIL PAGE ====== */
 async function joinGroupFromDetail(id) {
   try {
-    await apiFetch(`academic/groups/${id}/join`, { method: 'POST' });
+    await apiFetch(`groups/${id}/join`, { method: 'POST' });
     showToast('¡Te uniste al grupo! 🎉', 'success');
     location.reload();
   } catch(e) {
@@ -299,7 +300,7 @@ document.getElementById('submit-post-btn')?.addEventListener('click', async () =
         return;
     }
     try {
-        await apiFetch(`academic/groups/${GROUP_ID}/posts`, {
+        await apiFetch(`groups/${GROUP_ID}/posts`, {
             method: 'POST',
             body: JSON.stringify({ content: content })
         });

@@ -187,6 +187,20 @@ INSERT INTO `group_members` (`group_id`, `user_id`, `role`, `joined_at`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `group_posts`
+--
+
+CREATE TABLE `group_posts` (
+  `post_id` int(10) UNSIGNED NOT NULL,
+  `group_id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `content` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `group_post_links`
 --
 
@@ -326,6 +340,8 @@ CREATE TABLE `polls` (
   `poll_id` int(10) UNSIGNED NOT NULL,
   `creator_id` int(10) UNSIGNED NOT NULL,
   `faculty_id` int(10) UNSIGNED DEFAULT NULL,
+  `group_id` int(10) UNSIGNED DEFAULT NULL,
+  `audience` enum('public','faculty','group') DEFAULT 'public',
   `title` varchar(300) NOT NULL,
   `description` text DEFAULT NULL,
   `poll_type` enum('options','rating','yesno') DEFAULT 'options',
@@ -653,6 +669,14 @@ ALTER TABLE `group_members`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indices de la tabla `group_posts`
+--
+ALTER TABLE `group_posts`
+  ADD PRIMARY KEY (`post_id`),
+  ADD KEY `idx_group_created` (`group_id`,`created_at`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indices de la tabla `group_post_links`
 --
 ALTER TABLE `group_post_links`
@@ -712,6 +736,7 @@ ALTER TABLE `password_reset_tokens`
 ALTER TABLE `polls`
   ADD PRIMARY KEY (`poll_id`),
   ADD KEY `creator_id` (`creator_id`),
+  ADD KEY `group_id` (`group_id`),
   ADD KEY `idx_status` (`status`),
   ADD KEY `idx_category` (`category`);
 
@@ -835,6 +860,12 @@ ALTER TABLE `groups_table`
   MODIFY `group_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
+-- AUTO_INCREMENT de la tabla `group_posts`
+--
+ALTER TABLE `group_posts`
+  MODIFY `post_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `listings`
 --
 ALTER TABLE `listings`
@@ -951,6 +982,13 @@ ALTER TABLE `group_members`
   ADD CONSTRAINT `group_members_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
+-- Filtros para la tabla `group_posts`
+--
+ALTER TABLE `group_posts`
+  ADD CONSTRAINT `group_posts_ibfk_1` FOREIGN KEY (`group_id`) REFERENCES `groups_table` (`group_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `group_posts_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
 -- Filtros para la tabla `group_post_links`
 --
 ALTER TABLE `group_post_links`
@@ -999,7 +1037,8 @@ ALTER TABLE `password_reset_tokens`
 -- Filtros para la tabla `polls`
 --
 ALTER TABLE `polls`
-  ADD CONSTRAINT `polls_ibfk_1` FOREIGN KEY (`creator_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `polls_ibfk_1` FOREIGN KEY (`creator_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `polls_ibfk_2` FOREIGN KEY (`group_id`) REFERENCES `groups_table` (`group_id`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `poll_options`

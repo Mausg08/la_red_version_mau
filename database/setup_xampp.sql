@@ -197,6 +197,17 @@ CREATE TABLE IF NOT EXISTS group_members (
   FOREIGN KEY (user_id)  REFERENCES users(user_id)          ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS group_posts (
+  post_id    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  group_id   INT UNSIGNED NOT NULL,
+  user_id    INT UNSIGNED NOT NULL,
+  content    TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (group_id) REFERENCES groups_table(group_id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id)  REFERENCES users(user_id)         ON DELETE CASCADE,
+  INDEX idx_group_created (group_id, created_at)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS group_post_links (
   group_id INT UNSIGNED NOT NULL,
   post_id  INT UNSIGNED NOT NULL,
@@ -378,6 +389,8 @@ CREATE TABLE IF NOT EXISTS polls (
   poll_id     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   creator_id  INT UNSIGNED NOT NULL,
   faculty_id  INT UNSIGNED,
+  group_id    INT UNSIGNED,
+  audience    ENUM('public','faculty','group') DEFAULT 'public',
   title       VARCHAR(300) NOT NULL,
   description TEXT,
   poll_type   ENUM('options','rating','yesno') DEFAULT 'options',
@@ -388,8 +401,13 @@ CREATE TABLE IF NOT EXISTS polls (
   avg_rating  DECIMAL(3,2),
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (creator_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (group_id) REFERENCES groups_table(group_id) ON DELETE CASCADE,
   INDEX idx_status(status), INDEX idx_category(category)
 ) ENGINE=InnoDB;
+
+ALTER TABLE polls
+  ADD COLUMN IF NOT EXISTS group_id INT UNSIGNED NULL AFTER faculty_id,
+  ADD COLUMN IF NOT EXISTS audience ENUM('public','faculty','group') DEFAULT 'public' AFTER group_id;
 
 CREATE TABLE IF NOT EXISTS poll_options (
   option_id  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
